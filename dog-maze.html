@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Find the Happy Dog! 🐶</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;z-index:10}
+#start{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);color:#fff}
+#win{background:linear-gradient(135deg,#f9d423,#ff4e50);color:#fff;display:none}
+#lose{background:linear-gradient(135deg,#141e30,#243b55);color:#fff;display:none}
+h1{font-size:2.6em;margin-bottom:14px;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+h2{font-size:2em;margin-bottom:10px}
+p{font-size:1.05em;margin:5px 0;opacity:.9;max-width:480px}
+b{font-weight:bold}
+.btn{margin-top:20px;padding:13px 34px;font-size:1.1em;cursor:pointer;border:none;border-radius:30px;background:#ff6b35;color:#fff;font-weight:bold;box-shadow:0 4px 20px rgba(255,107,53,.4);transition:transform .15s}
+.btn:hover{transform:scale(1.07)}
+.btn.g{background:#2ecc71;box-shadow:0 4px 20px rgba(46,204,113,.4)}
+.btn.b{background:#3498db;box-shadow:0 4px 20px rgba(52,152,219,.4)}
+.emo{font-size:3.2em;margin:6px}
+#fear-wrap{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:5;display:none}
+#fear-lbl{color:#f55;font-size:.82em;font-weight:bold;margin-bottom:4px;text-shadow:0 0 8px rgba(255,80,80,.9)}
+#fear-bar{width:210px;height:17px;background:rgba(0,0,0,.6);border:2px solid #f55;border-radius:9px;overflow:hidden}
+#fear-fill{height:100%;width:0;background:linear-gradient(90deg,#ff6644,#ff0000);transition:width .12s;border-radius:7px}
+#xhair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,.75);font-size:20px;pointer-events:none;z-index:5;display:none;text-shadow:0 0 4px #000}
+#click-hint{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:1.15em;text-align:center;background:rgba(0,0,0,.78);padding:13px 22px;border-radius:10px;pointer-events:none;z-index:5;display:none;border:1px solid rgba(255,255,255,.2)}
+#minimap{position:fixed;top:14px;right:14px;width:138px;height:138px;background:rgba(0,0,0,.75);border:2px solid rgba(255,255,255,.22);border-radius:8px;display:none;z-index:5;overflow:hidden}
+#mc{width:100%;height:100%}
+#bark{position:fixed;top:33%;left:50%;transform:translate(-50%,-50%);color:#f55;font-size:1.75em;font-weight:bold;pointer-events:none;z-index:6;text-shadow:0 0 14px rgba(255,80,80,1);display:none;transition:opacity .3s}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:4;background:none}
+#keys{position:fixed;top:14px;left:14px;background:rgba(0,0,0,.58);color:#bbb;padding:9px 13px;border-radius:8px;font-size:.78em;pointer-events:none;z-index:5;display:none;border:1px solid rgba(255,255,255,.13);line-height:1.75}
+#dist-hint{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);color:#88ffaa;font-size:.85em;font-weight:bold;pointer-events:none;z-index:5;display:none;text-shadow:0 0 8px rgba(136,255,170,.8)}
+</style>
+</head>
+<body>
+
+<div id="start" class="screen">
+  <div class="emo">🐕</div>
+  <h1>Find the Happy Dog!</h1>
+  <p>The office maze has been overrun by <b>sad, demoralized dogs.</b></p>
+  <p>They roam the halls and chase you — draining your will to live.</p>
+  <p>Find the <b>✨ Golden Happy Dog ✨</b> to bring joy back!</p>
+  <br>
+  <p><b>WASD</b> to move &nbsp;·&nbsp; <b>Mouse</b> to look &nbsp;·&nbsp; <b>Click</b> to lock mouse</p>
+  <button class="btn" onclick="startGame()">🐶 Enter the Office!</button>
+</div>
+
+<div id="win" class="screen">
+  <div class="emo">🌟</div>
+  <h2>YOU FOUND THE HAPPY DOG!</h2>
+  <div class="emo">🐕‍🦺</div>
+  <p style="font-size:1.3em"><b>The golden dog is SO happy to see you!</b></p>
+  <p>You survived the maze of sadness and brought joy back to the office.</p>
+  <p style="font-size:1.4em;margin-top:12px">🎉 CONGRATULATIONS! 🎉</p>
+  <button class="btn g" onclick="startGame()">🐶 Play Again!</button>
+</div>
+
+<div id="lose" class="screen">
+  <div class="emo">😱</div>
+  <h2>The Sad Dogs Got You!</h2>
+  <div class="emo">😭</div>
+  <p>Their overwhelming sadness broke you...</p>
+  <p>But the happy dog is still waiting out there!</p>
+  <button class="btn b" onclick="startGame()">😤 Try Again!</button>
+</div>
+
+<div id="fear-wrap">
+  <div id="fear-lbl">😰 SADNESS METER</div>
+  <div id="fear-bar"><div id="fear-fill"></div></div>
+</div>
+<div id="xhair">+</div>
+<div id="click-hint">🖱 Click to capture mouse</div>
+<div id="minimap"><canvas id="mc" width="138" height="138"></canvas></div>
+<div id="bark"></div>
+<div id="vig"></div>
+<div id="keys">WASD · Move<br>Mouse · Look<br>ESC · Unlock</div>
+<div id="dist-hint"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── MAZE (15×15, all edges=1) ──────────────────────────────
+const M = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+  [1,0,1,1,0,1,1,0,1,1,1,0,1,0,1],
+  [1,0,1,0,0,0,0,0,0,0,1,0,0,0,1],
+  [1,0,1,0,1,1,1,1,1,0,1,0,1,0,1],
+  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,1],
+  [1,1,1,0,1,0,1,0,1,1,1,1,1,0,1],
+  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+  [1,0,1,1,1,1,1,1,1,0,1,1,1,0,1],
+  [1,0,0,0,0,0,0,0,1,0,0,0,1,0,1],
+  [1,1,1,0,1,1,0,0,1,1,1,0,0,0,1],
+  [1,0,0,0,1,0,0,1,0,0,0,0,1,0,1],
+  [1,0,1,1,1,0,1,1,0,1,1,0,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+const ROWS=M.length, COLS=M[0].length;
+const CS=4, WH=3;
+const toW = c => c*CS - (COLS*CS)/2 + CS/2;
+
+// verified open cells (M[r][c]===0)
+const P_START  = [1,1];
+const EXIT_RC  = [13,13];
+const DOG_RCS  = [[5,5],[3,8],[7,2],[9,10],[11,5]];
+const BARK_MSGS= ['WOOF WOOF! 😡','grrrrr... 😤','BARK BARK! 😠','*sad howl* 😭','BOF BOF! 😤','go AWAY! 😠'];
+
+// ── THREE.JS INIT ─────────────────────────────────────────
+let scene, cam, rend, clk;
+(function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0d0d08);
+  scene.fog = new THREE.Fog(0x0d0d08, 7, 32);
+
+  cam = new THREE.PerspectiveCamera(80, innerWidth/innerHeight, 0.1, 70);
+  cam.rotation.order = 'YXZ';
+
+  rend = new THREE.WebGLRenderer({antialias:true});
+  rend.setPixelRatio(Math.min(devicePixelRatio, 2));
+  rend.setSize(innerWidth, innerHeight);
+  rend.shadowMap.enabled = true;
+  document.body.appendChild(rend.domElement);
+
+  clk = new THREE.Clock();
+
+  addEventListener('resize',()=>{
+    cam.aspect = innerWidth/innerHeight;
+    cam.updateProjectionMatrix();
+    rend.setSize(innerWidth, innerHeight);
+  });
+})();
+
+// ── TEXTURES ─────────────────────────────────────────────
+function checkerTex(ca,cb,sz){
+  const cv=document.createElement('canvas'); cv.width=cv.height=sz;
+  const ctx=cv.getContext('2d'), h=sz/2;
+  ctx.fillStyle=ca; ctx.fillRect(0,0,sz,sz);
+  ctx.fillStyle=cb; ctx.fillRect(0,0,h,h); ctx.fillRect(h,h,h,h);
+  const t=new THREE.CanvasTexture(cv);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  return t;
+}
+
+// ── WORLD BUILD ──────────────────────────────────────────
+let sceneLights=[];
+function buildWorld(){
+  sceneLights=[];
+  const floorMat = new THREE.MeshLambertMaterial({map:checkerTex('#6a5a3a','#4a3a1a',64)});
+  const wallMat  = new THREE.MeshLambertMaterial({map:checkerTex('#d2c888','#b8ae6a',128)});
+  const ceilMat  = new THREE.MeshLambertMaterial({color:0xcec8a8});
+
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const wx=toW(c), wz=toW(r);
+    // floor always
+    const fl=new THREE.Mesh(new THREE.PlaneGeometry(CS,CS),floorMat);
+    fl.rotation.x=-Math.PI/2; fl.position.set(wx,0,wz); fl.receiveShadow=true;
+    scene.add(fl);
+
+    if(M[r][c]===1){
+      const w=new THREE.Mesh(new THREE.BoxGeometry(CS,WH,CS),wallMat);
+      w.position.set(wx,WH/2,wz); w.castShadow=true; w.receiveShadow=true;
+      scene.add(w);
+    } else {
+      const cl=new THREE.Mesh(new THREE.PlaneGeometry(CS,CS),ceilMat);
+      cl.rotation.x=Math.PI/2; cl.position.set(wx,WH,wz);
+      scene.add(cl);
+      // fluorescent fixtures every ~3 cells
+      if(r%3===1 && c%3===1){
+        const fix=new THREE.Mesh(
+          new THREE.PlaneGeometry(1.1,.22),
+          new THREE.MeshBasicMaterial({color:0xffffee})
+        );
+        fix.rotation.x=Math.PI/2; fix.position.set(wx,WH-.01,wz);
+        scene.add(fix);
+        const pl=new THREE.PointLight(0xffffd0,.85,13);
+        pl.position.set(wx,WH-.3,wz);
+        scene.add(pl);
+        sceneLights.push({light:pl,base:.85,t:Math.random()*6.28});
+      }
+    }
+  }
+
+  scene.add(new THREE.AmbientLight(0x302818,.35));
+}
+
+// ── DOG FACTORY ──────────────────────────────────────────
+function makeDog(sad, x, z){
+  const g = new THREE.Group();
+  const bodyCol = sad ? 0x555566 : 0xD4A832;
+  const lightCol= sad ? 0x333344 : 0xF0C055;
+  const mat  = n => new THREE.MeshLambertMaterial({color:n});
+  const bMat = mat(bodyCol), lMat = mat(lightCol);
+  const nMat = mat(sad?0x221122:0x221100);
+  const eMat = mat(sad?0x223344:0x442200);
+
+  function add(geo,m,x,y,z,rx=0,ry=0,rz=0){
+    const mesh=new THREE.Mesh(geo,m);
+    mesh.position.set(x,y,z);
+    mesh.rotation.set(rx,ry,rz);
+    g.add(mesh); return mesh;
+  }
+
+  // body
+  add(new THREE.BoxGeometry(.55,.42,.95), bMat,  0,.52, 0);
+  // neck
+  add(new THREE.BoxGeometry(.26,.24,.2),  bMat,  0,.62,.44);
+  // head
+  const head=add(new THREE.BoxGeometry(.44,.4,.42), bMat, 0,.72,.62, sad?.1:0);
+  // snout
+  add(new THREE.BoxGeometry(.25,.17,.27), lMat,  0, sad?.60:.62, .84);
+  // nose
+  add(new THREE.BoxGeometry(.12,.08,.06), nMat,  0, sad?.66:.70, .96);
+  // tongue (happy only)
+  if(!sad) add(new THREE.BoxGeometry(.14,.07,.19), mat(0xff6688), 0,.55,.93,  .32);
+  // eyes
+  for(const ex of [-.14,.14]){
+    add(new THREE.BoxGeometry(.08,.07,.05), eMat, ex,.78,.82);
+    if(sad){
+      const brow=new THREE.Mesh(new THREE.BoxGeometry(.1,.03,.04), lMat);
+      brow.position.set(ex,.85,.82); brow.rotation.z=ex>.0?.34:-.34; g.add(brow);
+    } else {
+      add(new THREE.BoxGeometry(.03,.03,.03), mat(0xffffff), ex-.02,.81,.84);
+    }
+  }
+  // ears
+  for(const ex of [-.25,.25]){
+    if(sad){
+      const e=add(new THREE.BoxGeometry(.13,.26,.17), lMat, ex,.58,.6);
+      e.rotation.z = ex>.0?-.36:.36;
+    } else {
+      add(new THREE.BoxGeometry(.13,.28,.19), lMat, ex,.95,.58);
+    }
+  }
+  // legs
+  for(const [lx,lz] of [[-.19,.37],[.19,.37],[-.19,-.38],[.19,-.38]]){
+    add(new THREE.BoxGeometry(.13,.38,.13), bMat, lx,.19,lz);
+  }
+  // tail
+  const tail=new THREE.Mesh(new THREE.BoxGeometry(.09,.09,.36), bMat);
+  if(sad){ tail.position.set(0,.38,-.58); tail.rotation.x=.5; }
+  else   { tail.position.set(0,.72,-.60); tail.rotation.x=-.7; }
+  g.add(tail);
+
+  // happy glow
+  if(!sad){
+    g.add(Object.assign(new THREE.Mesh(
+      new THREE.SphereGeometry(1.65,12,12),
+      new THREE.MeshBasicMaterial({color:0xffee44,transparent:true,opacity:.06,side:THREE.BackSide})
+    ),{position:new THREE.Vector3(0,.5,0)}));
+    const hl=new THREE.PointLight(0xffee44,2.5,10);
+    hl.position.set(x,2,z); scene.add(hl);
+  }
+
+  g.position.set(x,0,z);
+  scene.add(g);
+  return {mesh:g, tail, x, z, t:Math.random()*6.28, pd:0, pt:0, chasing:false};
+}
+
+// ── PORTAL ───────────────────────────────────────────────
+let portal=null;
+function makePortal(x,z){
+  const g=new THREE.Group();
+  const cyl=new THREE.Mesh(
+    new THREE.CylinderGeometry(.22,.22,WH,10,1,true),
+    new THREE.MeshBasicMaterial({color:0x88ffaa,transparent:true,opacity:.35,side:THREE.DoubleSide})
+  );
+  cyl.position.y=WH/2; g.add(cyl);
+  const ring=new THREE.Mesh(
+    new THREE.TorusGeometry(.65,.065,8,20),
+    new THREE.MeshBasicMaterial({color:0x88ffaa,transparent:true,opacity:.75})
+  );
+  ring.rotation.x=Math.PI/2; ring.position.y=.05; g.add(ring);
+  const pl=new THREE.PointLight(0x88ffaa,1.5,8);
+  pl.position.set(x,1.5,z); scene.add(pl);
+  g.position.set(x,0,z); scene.add(g);
+  portal={mesh:g,light:pl,cyl,t:0};
+}
+
+// ── PLAYER STATE ─────────────────────────────────────────
+let p={x:0,z:0,yaw:0,pitch:0,fear:0};
+let dogs=[], happyDog=null;
+let gameActive=false, gameOver=false;
+let keys={};
+let barkTimer=0, barkShown=false;
+
+// ── COLLISION ────────────────────────────────────────────
+function isWall(x,z){
+  const c=Math.floor((x+COLS*CS/2)/CS);
+  const r=Math.floor((z+ROWS*CS/2)/CS);
+  if(r<0||r>=ROWS||c<0||c>=COLS) return true;
+  return M[r][c]===1;
+}
+function slide(ox,oz,dx,dz){
+  const mg=.38, nx=ox+dx, nz=oz+dz;
+  const xOk = !isWall(nx+mg,oz)&&!isWall(nx-mg,oz)&&!isWall(nx+mg,oz+mg)&&!isWall(nx-mg,oz+mg)&&!isWall(nx+mg,oz-mg)&&!isWall(nx-mg,oz-mg);
+  const zOk = !isWall(ox,nz+mg)&&!isWall(ox,nz-mg)&&!isWall(ox+mg,nz+mg)&&!isWall(ox-mg,nz+mg)&&!isWall(ox+mg,nz-mg)&&!isWall(ox-mg,nz-mg);
+  return {x:xOk?nx:ox, z:zOk?nz:oz};
+}
+
+// ── CONTROLS ─────────────────────────────────────────────
+(function setupControls(){
+  addEventListener('keydown',e=>{keys[e.code]=true;});
+  addEventListener('keyup',  e=>{keys[e.code]=false;});
+  addEventListener('mousemove',e=>{
+    if(!gameActive||gameOver) return;
+    if(document.pointerLockElement!==rend.domElement) return;
+    p.yaw   -= e.movementX*.002;
+    p.pitch -= e.movementY*.002;
+    p.pitch  = Math.max(-1.1,Math.min(1.1,p.pitch));
+    cam.rotation.y=p.yaw; cam.rotation.x=p.pitch;
+  });
+  rend.domElement.addEventListener('click',()=>{
+    if(gameActive&&!gameOver) rend.domElement.requestPointerLock();
+  });
+  addEventListener('pointerlockchange',()=>{
+    const locked=document.pointerLockElement===rend.domElement;
+    document.getElementById('click-hint').style.display=locked?'none':'block';
+  });
+})();
+
+// ── UPDATE FUNCTIONS ─────────────────────────────────────
+function updatePlayer(dt){
+  const spd=5*dt, c=Math.cos(p.yaw), s=Math.sin(p.yaw);
+  let dx=0,dz=0;
+  if(keys['KeyW']||keys['ArrowUp'])    {dx-=s*spd;dz-=c*spd;}
+  if(keys['KeyS']||keys['ArrowDown'])  {dx+=s*spd;dz+=c*spd;}
+  if(keys['KeyA']||keys['ArrowLeft'])  {dx-=c*spd;dz+=s*spd;}
+  if(keys['KeyD']||keys['ArrowRight']) {dx+=c*spd;dz-=s*spd;}
+  if(dx||dz){const r=slide(p.x,p.z,dx,dz);p.x=r.x;p.z=r.z;}
+  cam.position.set(p.x,1.6,p.z);
+}
+
+function updateDogs(dt){
+  let scaringMe=false;
+  const barkEl=document.getElementById('bark');
+
+  dogs.forEach(dog=>{
+    const dist=Math.hypot(dog.x-p.x, dog.z-p.z);
+    dog.chasing = dist < 10;
+    let dx=0,dz=0;
+    if(dog.chasing){
+      const a=Math.atan2(p.x-dog.x, p.z-dog.z);
+      dx=Math.sin(a)*2.8*dt; dz=Math.cos(a)*2.8*dt;
+    } else {
+      dog.pt-=dt;
+      if(dog.pt<=0){dog.pd=Math.random()*Math.PI*2; dog.pt=1+Math.random()*2;}
+      dx=Math.sin(dog.pd)*1.3*dt; dz=Math.cos(dog.pd)*1.3*dt;
+    }
+    const r=slide(dog.x,dog.z,dx,dz);
+    if(r.x===dog.x&&r.z===dog.z&&!dog.chasing){dog.pd=Math.random()*Math.PI*2;dog.pt=0;}
+    dog.x=r.x; dog.z=r.z;
+    dog.mesh.position.set(dog.x,0,dog.z);
+    if(Math.abs(dx)>.0005||Math.abs(dz)>.0005) dog.mesh.rotation.y=Math.atan2(dx,dz);
+    dog.t+=dt*(dog.chasing?3.5:1.2);
+    dog.tail.rotation.x=.5+Math.sin(dog.t)*.12;
+
+    if(dist<1.1){
+      scaringMe=true;
+      p.fear=Math.min(100,p.fear+20*dt);
+      barkTimer=Math.max(barkTimer,1.6);
+      if(!barkShown){
+        barkEl.textContent=BARK_MSGS[Math.floor(Math.random()*BARK_MSGS.length)];
+        barkShown=true;
+      }
+      const pa=Math.atan2(p.x-dog.x,p.z-dog.z);
+      p.x+=Math.sin(pa)*.07; p.z+=Math.cos(pa)*.07;
+    }
+  });
+
+  if(!scaringMe){
+    barkShown=false;
+    p.fear=Math.max(0,p.fear-5*dt);
+  }
+  p.fear=Math.min(100,p.fear);
+  document.getElementById('fear-fill').style.width=p.fear+'%';
+
+  // vignette
+  const vi=p.fear/100;
+  document.getElementById('vig').style.background=vi<.02?'none':
+    `radial-gradient(ellipse at center,transparent ${70-vi*28}%,rgba(180,0,0,${vi*.5}) 100%)`;
+
+  // bark popup
+  barkTimer=Math.max(0,barkTimer-dt);
+  if(barkTimer>0){
+    barkEl.style.display='block';
+    barkEl.style.opacity=Math.min(1,barkTimer*1.5).toString();
+  } else {
+    barkEl.style.display='none';
+  }
+
+  if(p.fear>=100) triggerLose();
+}
+
+function updateHappyDog(dt){
+  if(!happyDog) return;
+  happyDog.t+=dt;
+  happyDog.tail.rotation.z=Math.sin(happyDog.t*7)*.55;
+  happyDog.mesh.position.y=Math.sin(happyDog.t*2.5)*.07;
+  happyDog.mesh.rotation.y+=dt*.9;
+  const dist=Math.hypot(happyDog.x-p.x, happyDog.z-p.z);
+  // distance hint
+  const hint=document.getElementById('dist-hint');
+  if(dist<8){
+    hint.style.display='block';
+    hint.textContent=dist<2.5?'🐕 SO CLOSE! 🐕':`🐕 Happy dog nearby! (${dist.toFixed(1)}m)`;
+  } else { hint.style.display='none'; }
+  if(dist<2.2&&!gameOver) triggerWin();
+}
+
+function updatePortal(dt){
+  if(!portal) return;
+  portal.t+=dt;
+  portal.mesh.rotation.y+=dt*1.3;
+  const fl=.28+Math.sin(portal.t*2.2)*.13;
+  portal.cyl.material.opacity=fl;
+  portal.light.intensity=1.1+Math.sin(portal.t*3)*.45;
+}
+
+function updateLights(dt){
+  sceneLights.forEach(sl=>{
+    sl.t+=dt*4;
+    sl.light.intensity=sl.base+Math.sin(sl.t*11)*.04+Math.sin(sl.t*7)*.025;
+  });
+}
+
+function drawMinimap(){
+  const cv=document.getElementById('mc');
+  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+  const cw=W/COLS, ch=H/ROWS;
+  ctx.clearRect(0,0,W,H);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    ctx.fillStyle=M[r][c]===1?'#3a4a3a':'#111';
+    ctx.fillRect(c*cw,r*ch,cw,ch);
+  }
+  // exit glow
+  ctx.fillStyle='#88ffaa';
+  ctx.fillRect(EXIT_RC[1]*cw-1,EXIT_RC[0]*ch-1,cw+2,ch+2);
+  // dogs
+  dogs.forEach(d=>{
+    const dc=(d.x+(COLS*CS/2))/CS, dr=(d.z+(ROWS*CS/2))/CS;
+    ctx.fillStyle=d.chasing?'#ff4444':'#7777aa';
+    ctx.beginPath(); ctx.arc(dc*cw,dr*ch,cw*.7,0,6.28); ctx.fill();
+  });
+  // player dot + direction
+  const pc=(p.x+(COLS*CS/2))/CS, pr=(p.z+(ROWS*CS/2))/CS;
+  ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.arc(pc*cw,pr*ch,cw*.85,0,6.28); ctx.fill();
+  ctx.strokeStyle='#ff0'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(pc*cw,pr*ch);
+  ctx.lineTo(pc*cw-Math.sin(p.yaw)*cw*2.5, pr*ch-Math.cos(p.yaw)*ch*2.5);
+  ctx.stroke();
+}
+
+// ── WIN / LOSE ────────────────────────────────────────────
+function triggerWin(){
+  if(gameOver) return;
+  gameOver=true; gameActive=false;
+  document.exitPointerLock();
+  setTimeout(()=>{ document.getElementById('win').style.display='flex'; hideHUD(); },450);
+}
+function triggerLose(){
+  if(gameOver) return;
+  gameOver=true; gameActive=false;
+  document.exitPointerLock();
+  setTimeout(()=>{ document.getElementById('lose').style.display='flex'; hideHUD(); },450);
+}
+function hideHUD(){
+  ['fear-wrap','xhair','click-hint','minimap','keys','dist-hint'].forEach(
+    id=>document.getElementById(id).style.display='none'
+  );
+  document.getElementById('vig').style.background='none';
+  document.getElementById('bark').style.display='none';
+}
+function showHUD(){
+  document.getElementById('fear-wrap').style.display='block';
+  document.getElementById('xhair').style.display='block';
+  document.getElementById('minimap').style.display='block';
+  document.getElementById('keys').style.display='block';
+}
+
+// ── MAIN LOOP ─────────────────────────────────────────────
+function loop(){
+  requestAnimationFrame(loop);
+  const dt=Math.min(clk.getDelta(),.05);
+  if(gameActive&&!gameOver){
+    updatePlayer(dt);
+    updateDogs(dt);
+    updateHappyDog(dt);
+    updatePortal(dt);
+    updateLights(dt);
+    drawMinimap();
+  }
+  rend.render(scene,cam);
+}
+
+// ── START GAME ────────────────────────────────────────────
+function startGame(){
+  ['start','win','lose'].forEach(id=>document.getElementById(id).style.display='none');
+  showHUD();
+
+  // clear scene
+  while(scene.children.length) scene.remove(scene.children[0]);
+  dogs=[]; happyDog=null; portal=null;
+  gameOver=false; gameActive=true;
+  barkTimer=0; barkShown=false;
+
+  buildWorld();
+
+  // player
+  p.x=toW(P_START[1]); p.z=toW(P_START[0]);
+  p.yaw=0; p.pitch=0; p.fear=0;
+  cam.position.set(p.x,1.6,p.z);
+  cam.rotation.set(0,0,0);
+  document.getElementById('fear-fill').style.width='0%';
+
+  // sad dogs
+  dogs=DOG_RCS.map(([r,c])=>makeDog(true,toW(c),toW(r)));
+
+  // happy dog + portal
+  const hx=toW(EXIT_RC[1]), hz=toW(EXIT_RC[0]);
+  happyDog=makeDog(false,hx,hz);
+  makePortal(hx,hz);
+
+  document.getElementById('click-hint').style.display='block';
+  clk.getDelta(); // reset delta so first frame isn't huge
+}
+
+loop(); // start render loop (shows black until game starts)
+</script>
+</body>
+</html>
